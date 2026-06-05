@@ -25,6 +25,8 @@ const theme = {
   chart: ["#c24d24", "#0a4550", "#c99a3e", "#386641", "#7f4f24", "#2f6f6f", "#6d597a", "#173f46"],
 };
 
+const RADIAN = Math.PI / 180;
+
 function formatValue(value) {
   if (typeof value !== "number") {
     return value;
@@ -50,8 +52,36 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+function formatPieLabelName(name) {
+  const text = String(name || "");
+  if (text.length <= 14) {
+    return text;
+  }
+  return `${text.slice(0, 11)}...`;
+}
+
+function renderPieLabel({ cx, cy, midAngle, outerRadius, name, percent, fill }) {
+  const labelRadius = Number(outerRadius || 0) + 12;
+  const x = Number(cx || 0) + labelRadius * Math.cos(-midAngle * RADIAN);
+  const y = Number(cy || 0) + labelRadius * Math.sin(-midAngle * RADIAN);
+  const textAnchor = x > Number(cx || 0) ? "start" : "end";
+
+  return (
+    <text
+      className="recharts-pie-label-text"
+      dominantBaseline="central"
+      fill={fill || theme.foreground}
+      textAnchor={textAnchor}
+      x={x}
+      y={y}
+    >
+      {`${formatPieLabelName(name)} ${(percent * 100).toFixed(1)}%`}
+    </text>
+  );
+}
+
 function PieGrid({ spec }) {
-  const pieMargin = spec.pieMargin || { top: 24, right: 96, bottom: 34, left: 96 };
+  const pieCount = (spec.pies || []).length;
 
   return (
     <main className="page">
@@ -62,22 +92,22 @@ function PieGrid({ spec }) {
             {spec.description ? <p>{spec.description}</p> : null}
           </div>
         </header>
-        <div className={`pie-grid pie-count-${Math.min((spec.pies || []).length, 6)}`}>
+        <div className={`pie-grid pie-count-${Math.min(pieCount, 6)}`}>
           {(spec.pies || []).map((pie, pieIndex) => (
             <section className="pie-panel" key={pie.title || pieIndex}>
               <h2>{pie.title}</h2>
               <div className="pie-chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={pieMargin}>
+                  <PieChart margin={{ top: 24, right: 96, bottom: 34, left: 96 }}>
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ color: theme.foreground, fontSize: 18, fontWeight: 800 }} />
                     <Pie
                       data={pie.data || []}
                       dataKey="value"
-                      cx="50%"
+                      cx={pieCount === 2 ? (pieIndex === 0 ? "60%" : "40%") : "50%"}
                       cy="46%"
                       isAnimationActive={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                      label={renderPieLabel}
                       labelLine={false}
                       nameKey="name"
                       outerRadius="82%"

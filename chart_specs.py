@@ -51,11 +51,10 @@ def pie_grid_spec(
     pies: List[Dict[str, Any]],
     width: int = 1200,
     height: int = 700,
-    pie_margin: Optional[Dict[str, int]] = None,
 ) -> Dict[str, Any]:
     """构建多饼图规格。"""
 
-    spec: Dict[str, Any] = {
+    return {
         "kind": "pie-grid",
         "title": title,
         "description": description,
@@ -63,9 +62,6 @@ def pie_grid_spec(
         "height": height,
         "pies": pies,
     }
-    if pie_margin is not None:
-        spec["pieMargin"] = pie_margin
-    return spec
 
 
 def simple_time_series_spec(

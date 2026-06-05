@@ -255,6 +255,7 @@ class WebUIChartRenderer:
       width: 100%;
       height: calc(100% - 58px);
       padding: 8px 18px 16px;
+      overflow: visible;
     }}
     .pie-grid.pie-count-1 {{
       grid-template-columns: minmax(0, 1fr);
