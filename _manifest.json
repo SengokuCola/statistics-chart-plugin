@@ -1,0 +1,56 @@
+{
+  "manifest_version": 2,
+  "version": "0.1.0",
+  "name": "Statistics Chart Plugin",
+  "description": "只读取本机 MaiBot 数据库和日志文件，绘制消息、token、模型、工具、在线时长、交互消息、缓存命中、日志、Prompt 耗时和内存探针等统计图。",
+  "author": {
+    "name": "MaiBot Contributors",
+    "url": "https://github.com/Mai-with-u"
+  },
+  "license": "GPL-v3.0-or-later",
+  "urls": {
+    "repository": "https://github.com/Mai-with-u/maibot-plugin-sdk",
+    "homepage": "https://github.com/Mai-with-u/maibot-plugin-sdk",
+    "documentation": "https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/guide.md",
+    "issues": "https://github.com/Mai-with-u/maibot-plugin-sdk/issues"
+  },
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "1.0.0"
+  },
+  "sdk": {
+    "min_version": "2.5.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [
+    {
+      "type": "python_package",
+      "name": "pillow",
+      "version_spec": ">=11.3.0"
+    },
+    {
+      "type": "python_package",
+      "name": "playwright",
+      "version_spec": ">=1.54.0"
+    }
+  ],
+  "plugin_type": "data",
+  "display": {
+    "icon": {
+      "type": "lucide",
+      "value": "bar-chart-3"
+    }
+  },
+  "capabilities": [
+    "send.text",
+    "send.image"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "locales_path": "_locales",
+    "supported_locales": [
+      "zh-CN"
+    ]
+  },
+  "id": "maibot-team.statistics-chart-plugin"
+}

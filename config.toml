@@ -1,0 +1,14 @@
+[plugin]
+name = "statistics_chart_plugin"
+version = "0.1.0"
+enabled = true
+config_version = "0.1.0"
+
+[data]
+db_path = "data/MaiBot.db"
+
+[draw]
+pic_dir = "data/pic"
+
+[cache]
+summary_cache_seconds = 120
