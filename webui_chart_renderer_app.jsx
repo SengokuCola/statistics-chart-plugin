@@ -51,6 +51,8 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 function PieGrid({ spec }) {
+  const pieMargin = spec.pieMargin || { top: 24, right: 96, bottom: 34, left: 96 };
+
   return (
     <main className="page">
       <section className="card">
@@ -66,7 +68,7 @@ function PieGrid({ spec }) {
               <h2>{pie.title}</h2>
               <div className="pie-chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 24, right: 96, bottom: 34, left: 96 }}>
+                  <PieChart margin={pieMargin}>
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ color: theme.foreground, fontSize: 18, fontWeight: 800 }} />
                     <Pie

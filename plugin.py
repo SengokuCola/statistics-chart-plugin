@@ -1141,14 +1141,18 @@ class StatisticsChartPlugin(MaiBotPlugin):
             await self._send_text(stream_id, error_msg)
             return False, error_msg, True
 
+        is_token_distribution = prefix == "token_distribution"
         image_path = await self._render_webui_chart(
             prefix,
             pie_grid_spec(
                 title=title,
                 description=description,
                 pies=result.pies,
-                width=1500,
+                width=1800 if is_token_distribution else 1500,
                 height=900,
+                pie_margin=(
+                    {"top": 24, "right": 320, "bottom": 34, "left": 220} if is_token_distribution else None
+                ),
             ),
         )
         await self._send_text(stream_id, f"{title}\n{total_label}：{result.total}，聚合项：{result.source_count}")

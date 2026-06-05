@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Statistics Chart Plugin",
   "description": "只读取本机 MaiBot 数据库，绘制消息、token、模型、工具、在线时长、交互消息和 Prompt Cache 命中等统计图。",
   "author": {

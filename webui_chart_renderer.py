@@ -284,6 +284,12 @@ class WebUIChartRenderer:
       min-width: 0;
       min-height: 0;
       flex: 1;
+      overflow: visible;
+    }}
+    .pie-chart-wrap .recharts-responsive-container,
+    .pie-chart-wrap .recharts-wrapper,
+    .pie-chart-wrap .recharts-surface {{
+      overflow: visible !important;
     }}
     .chart-tooltip {{
       min-width: 150px;
