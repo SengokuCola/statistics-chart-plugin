@@ -67,7 +67,7 @@ class PluginSection(PluginConfigBase):
     __ui_order__ = 10
 
     name: str = Field(default="statistics_chart_plugin", title="插件名称")
-    version: str = Field(default="0.1.2", title="插件版本")
+    version: str = Field(default="0.1.3", title="插件版本")
     enabled: bool = Field(default=True, title="启用插件")
     config_version: str = Field(default="0.1.2", title="配置版本")
 

@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "麦麦统计图表！",
   "description": "绘制MaiBot消息、token、模型、工具、在线时长、交互消息和 Prompt Cache 命中等统计图。",
   "author": {
@@ -15,7 +15,7 @@
     "issues": "https://github.com/SengokuCola/statistics-chart-plugin/issues"
   },
   "host_application": {
-    "min_version": "1.3.4",
+    "min_version": "1.3.0",
     "max_version": "1.3.99"
   },
   "sdk": {
