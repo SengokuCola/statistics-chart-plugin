@@ -1,5 +1,6 @@
 """统计绘图插件 SDK 入口。"""
 
+from asyncio import to_thread
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -66,9 +67,9 @@ class PluginSection(PluginConfigBase):
     __ui_order__ = 10
 
     name: str = Field(default="statistics_chart_plugin", title="插件名称")
-    version: str = Field(default="0.1.0", title="插件版本")
+    version: str = Field(default="0.1.2", title="插件版本")
     enabled: bool = Field(default=True, title="启用插件")
-    config_version: str = Field(default="0.1.0", title="配置版本")
+    config_version: str = Field(default="0.1.2", title="配置版本")
 
 
 class DataSection(PluginConfigBase):
@@ -139,13 +140,12 @@ class StatisticsChartPlugin(MaiBotPlugin):
 
         relative_path = Path(self.config.draw.pic_dir)
         path = relative_path if relative_path.is_absolute() else self.plugin_dir / relative_path
-        path.mkdir(parents=True, exist_ok=True)
         return path
 
     async def on_load(self) -> None:
         """处理插件加载。"""
 
-        self.pic_dir.mkdir(parents=True, exist_ok=True)
+        await to_thread(self.pic_dir.mkdir, parents=True, exist_ok=True)
         self.ctx.logger.info("统计绘图插件已加载")
 
     async def on_unload(self) -> None:
@@ -406,7 +406,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
         self._chart_show_time_paths.discard(image_path)
 
         image_encode_started_at = time.perf_counter()
-        image_base64, image_format, image_size = self._image_path_to_send_base64(image_path)
+        image_base64, image_format, image_size = await to_thread(self._image_path_to_send_base64, image_path)
         image_encode_seconds = time.perf_counter() - image_encode_started_at
         image_send_started_at = time.perf_counter()
         await self.ctx.send.image(image_base64, stream_id)
@@ -488,8 +488,6 @@ class StatisticsChartPlugin(MaiBotPlugin):
         started_at = time.perf_counter()
         rendered_path = await render_webui_chart(self.plugin_dir, spec, image_path)
         render_seconds = time.perf_counter() - started_at
-        if rendered_path is None:
-            raise RuntimeError("WebUI 图表渲染失败，请检查 dashboard/node_modules、Chrome/Edge 和 Playwright 环境")
         self._chart_render_seconds[rendered_path] = render_seconds
         self._chart_render_started_at[rendered_path] = started_at
         self._chart_render_finished_at[rendered_path] = started_at + render_seconds
@@ -644,7 +642,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             if now - cached_at <= cache_seconds and cached_path.exists():
                 return cached_path
 
-        summary_text = self._get_service().build_summary(days=days)
+        summary_text = await to_thread(self._get_service().build_summary, days=days)
         image_path = await self._render_webui_chart(
             "statistics_summary",
             self._build_summary_card_spec(days=days, summary_text=summary_text),
@@ -703,7 +701,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             days = self._parse_days(args, 7)
             bucket = self._parse_bucket(args, "day")
             top_chats = self._parse_top(args, 6)
-            result = self._get_service().fetch_message_trend(days=days, bucket=bucket, top_chats=top_chats)
+            result = await to_thread(self._get_service().fetch_message_trend, days=days, bucket=bucket, top_chats=top_chats)
             return await self._send_time_series_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,
@@ -741,7 +739,8 @@ class StatisticsChartPlugin(MaiBotPlugin):
             bucket = self._parse_bucket(args, "day")
             top_items = self._parse_top(args, 6)
             group_by = self._parse_token_group(args, None)
-            result = self._get_service().fetch_token_trend(
+            result = await to_thread(
+                self._get_service().fetch_token_trend,
                 days=days,
                 bucket=bucket,
                 group_by=group_by,
@@ -811,7 +810,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             days = self._parse_days(args, 7)
             top_items = self._parse_top(args, 10)
             group_by = self._parse_token_group(args, "model") or "model"
-            result = self._get_service().fetch_token_distribution(days=days, group_by=group_by, top_items=top_items)
+            result = await to_thread(self._get_service().fetch_token_distribution, days=days, group_by=group_by, top_items=top_items)
             return await self._send_pie_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,
@@ -850,7 +849,8 @@ class StatisticsChartPlugin(MaiBotPlugin):
             top_models = self._parse_top(args, 6)
             metric = self._parse_model_metric(args)
             module_name = self._parse_module_name(args)
-            result = self._get_service().fetch_model_trend(
+            result = await to_thread(
+                self._get_service().fetch_model_trend,
                 days=days,
                 bucket=bucket,
                 top_models=top_models,
@@ -897,7 +897,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             days = self._parse_days(args, 7)
             bucket = self._parse_bucket(args, "day")
             top_tools = self._parse_top(args, 6)
-            result = self._get_service().fetch_tool_trend(days=days, bucket=bucket, top_tools=top_tools)
+            result = await to_thread(self._get_service().fetch_tool_trend, days=days, bucket=bucket, top_tools=top_tools)
             return await self._send_time_series_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,
@@ -935,7 +935,8 @@ class StatisticsChartPlugin(MaiBotPlugin):
             top_chats = self._parse_top(args, 8)
             top_tools = self._parse_named_int(args, "tools", 10, upper=16)
             min_chat_total = self._parse_named_int(args, "min", 1, upper=100000)
-            result = self._get_service().fetch_tool_chat_distribution(
+            result = await to_thread(
+                self._get_service().fetch_tool_chat_distribution,
                 days=days,
                 top_chats=top_chats,
                 top_tools=top_tools,
@@ -976,7 +977,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             args = self._effective_args(matched_groups)
             days = self._parse_days(args, 30)
             bucket = self._parse_bucket(args, "day")
-            result = self._get_service().fetch_online_time_trend(days=days, bucket=bucket)
+            result = await to_thread(self._get_service().fetch_online_time_trend, days=days, bucket=bucket)
             return await self._send_custom_time_series_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,
@@ -1028,7 +1029,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             args = self._effective_args(matched_groups)
             days = self._parse_days(args, 7)
             bucket = self._parse_bucket(args, "day")
-            result = self._get_service().fetch_interaction_trend(days=days, bucket=bucket)
+            result = await to_thread(self._get_service().fetch_interaction_trend, days=days, bucket=bucket)
             return await self._send_custom_time_series_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,
@@ -1079,7 +1080,7 @@ class StatisticsChartPlugin(MaiBotPlugin):
             args = self._effective_args(matched_groups)
             days = self._parse_days(args, 7)
             bucket = self._parse_bucket(args, "day")
-            result = self._get_service().fetch_cache_trend(days=days, bucket=bucket)
+            result = await to_thread(self._get_service().fetch_cache_trend, days=days, bucket=bucket)
             return await self._send_custom_time_series_chart(
                 stream_id=stream_id,
                 command_started_at=command_started_at,

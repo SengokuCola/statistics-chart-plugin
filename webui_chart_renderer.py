@@ -5,17 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import asyncio
-import json
-import logging
-import os
-import shutil
-import subprocess
-
 from playwright.async_api import async_playwright
 
-
-logger = logging.getLogger(__name__)
+import asyncio
+import json
+import os
 
 
 class WebUIChartRenderer:
@@ -23,30 +17,23 @@ class WebUIChartRenderer:
 
     def __init__(self, plugin_dir: Path):
         self.plugin_dir = plugin_dir
-        self.repo_dir = plugin_dir.parents[1]
-        self.dashboard_dir = self.repo_dir / "dashboard"
-        self.app_source = plugin_dir / "webui_chart_renderer_app.jsx"
-        self.cache_dir = plugin_dir / "data" / "webui_chart_renderer"
-        self.bundle_path = self.cache_dir / "statistics_chart.bundle.js"
+        # 发布包携带预编译脚本，运行时无需主程序前端源码或 Node.js。
+        self.bundle_path = plugin_dir / "assets" / "statistics_chart.bundle.js"
 
-    async def render(self, spec: Dict[str, Any], output_path: Path) -> Optional[Path]:
-        """渲染图表，失败时返回 None。"""
+    async def render(self, spec: Dict[str, Any], output_path: Path) -> Path:
+        """渲染图表；依赖缺失和浏览器错误直接交给调用方报告。"""
 
-        try:
-            self._ensure_bundle()
+        html = await asyncio.to_thread(self._build_html, spec)
+        await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
+        async with async_playwright() as playwright:
             browser_path = self._find_browser_executable()
-            if browser_path is None:
-                logger.warning("统计图表渲染跳过: 未找到 Chrome/Edge 浏览器")
-                return None
-
-            html = self._build_html(spec)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            async with async_playwright() as playwright:
-                browser = await playwright.chromium.launch(
-                    executable_path=str(browser_path),
-                    args=["--disable-gpu", "--disable-dev-shm-usage"],
-                    headless=True,
-                )
+            # 未指定系统浏览器时，使用 Playwright 安装的 Chromium。
+            browser = await playwright.chromium.launch(
+                executable_path=str(browser_path) if browser_path is not None else None,
+                args=["--disable-gpu", "--disable-dev-shm-usage"],
+                headless=True,
+            )
+            try:
                 page = await browser.new_page(
                     viewport={
                         "width": int(spec.get("width", 1200) or 1200),
@@ -57,52 +44,13 @@ class WebUIChartRenderer:
                 await page.set_content(html, wait_until="domcontentloaded")
                 await page.wait_for_function("window.__MAIBOT_CHART_READY__ === true", timeout=20000)
                 await page.locator("#chart-card").screenshot(path=str(output_path))
+            finally:
                 await browser.close()
-            return output_path
-        except Exception as exc:
-            logger.warning("统计图表渲染失败: %s", exc)
-            return None
-
-    def _ensure_bundle(self) -> None:
-        if self._is_bundle_fresh():
-            return
-
-        node_path = shutil.which("node")
-        esbuild_path = self.dashboard_dir / "node_modules" / "esbuild" / "bin" / "esbuild"
-        if node_path is None:
-            raise RuntimeError("未找到 node")
-        if not esbuild_path.exists():
-            raise RuntimeError(f"未找到 esbuild: {esbuild_path}")
-        if not (self.dashboard_dir / "node_modules" / "recharts").exists():
-            raise RuntimeError("dashboard/node_modules 中缺少 recharts")
-
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        env = os.environ.copy()
-        env["NODE_PATH"] = str(self.dashboard_dir / "node_modules")
-        subprocess.run(
-            [
-                node_path,
-                str(esbuild_path),
-                str(self.app_source),
-                "--bundle",
-                "--format=iife",
-                "--global-name=MaiBotStatsChart",
-                "--platform=browser",
-                "--jsx=automatic",
-                f"--outfile={self.bundle_path}",
-            ],
-            cwd=str(self.repo_dir),
-            env=env,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-    def _is_bundle_fresh(self) -> bool:
-        return self.bundle_path.exists() and self.bundle_path.stat().st_mtime >= self.app_source.stat().st_mtime
+        return output_path
 
     def _build_html(self, spec: Dict[str, Any]) -> str:
+        if not self.bundle_path.is_file():
+            raise RuntimeError(f"插件缺少预编译图表脚本，请重新安装完整发布包: {self.bundle_path}")
         bundle = self.bundle_path.read_text(encoding="utf-8")
         spec_json = json.dumps(spec, ensure_ascii=False).replace("</", "<\\/")
         width = int(spec.get("width", 1200) or 1200)
@@ -327,8 +275,12 @@ class WebUIChartRenderer:
     @staticmethod
     def _find_browser_executable() -> Optional[Path]:
         env_browser = os.environ.get("MAIBOT_CHART_BROWSER", "").strip()
+        if env_browser:
+            browser_path = Path(env_browser)
+            if not browser_path.is_file():
+                raise RuntimeError(f"MAIBOT_CHART_BROWSER 指定的浏览器不存在: {browser_path}")
+            return browser_path
         candidates = [
-            Path(env_browser) if env_browser else None,
             Path("C:/Program Files/Google/Chrome/Application/chrome.exe"),
             Path("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"),
             Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
@@ -340,8 +292,7 @@ class WebUIChartRenderer:
         return None
 
 
-async def render_webui_chart(plugin_dir: Path, spec: Dict[str, Any], output_path: Path) -> Optional[Path]:
+async def render_webui_chart(plugin_dir: Path, spec: Dict[str, Any], output_path: Path) -> Path:
     """便捷函数，避免调用方关心渲染器生命周期。"""
 
-    await asyncio.sleep(0)
     return await WebUIChartRenderer(plugin_dir).render(spec, output_path)

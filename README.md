@@ -1,5 +1,7 @@
 # 统计绘图插件
 
+当前版本：`0.1.2`，支持 MaiBot `1.3.4–1.3.x` 和插件 SDK `2.9.x`。
+
 这是一个只读取本机数据的 MaiBot 统计绘图插件。它仿照 `mai_statstic_plugin` 的图片渲染链路，把图表规格交给 React/Recharts，再用 Playwright 截图成 PNG 并发送到聊天流。
 
 ## 数据来源
@@ -7,6 +9,27 @@
 - `data/MaiBot.db`：只读 SQLite 连接，优先使用 `statistics_message_hourly`、`statistics_model_hourly`、`statistics_tool_hourly` 这些本机聚合表，也会读取 `llm_usage`、`online_time` 和 `mai_messages` 做更细的统计。
 
 插件不会访问远端 API，也不会同步或上传遥测数据。
+
+## 安装与运行
+
+将完整插件解压到 MaiBot 的 `plugins/statistics_chart_plugin` 目录后启用。
+发布包自带 `assets/statistics_chart.bundle.js`，运行时无需 Node.js、`dashboard` 源码或 `node_modules`。
+需要 Pillow 和 Playwright；Windows 默认使用已安装的 Chrome/Edge，其他环境可安装 Playwright Chromium：
+
+```shell
+uv run python -m playwright install chromium
+```
+
+也可以用 `MAIBOT_CHART_BROWSER` 指定浏览器可执行文件的完整路径。
+
+## 开发构建
+
+仅修改图表 JSX 后需要在插件目录重新构建，并提交生成的 `assets` 文件：
+
+```shell
+npm ci
+npm run build
+```
 
 ## 命令
 
@@ -35,3 +58,13 @@ pic_dir = "data/pic"
 [cache]
 summary_cache_seconds = 120
 ```
+
+## 更新记录
+
+### 0.1.2
+
+- 适配 MaiBot 1.3.4 / 插件 SDK 2.9.0。
+- 图表脚本随插件发布，修复缺少 `dashboard/node_modules` 时无法出图的问题。
+- 数据查询、图表脚本读取和图片编码在线程中执行，避免阻塞插件事件循环。
+- 支持 Playwright 自带 Chromium，浏览器和资源错误保留原始信息。
+- 增加本地图标。
